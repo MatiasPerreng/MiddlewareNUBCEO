@@ -159,7 +159,7 @@ class PlatformExternalInfo(BaseModel):
 
 
 class PlatformExternalActiveRecord(BaseModel):
-    """Ítem de /SELF-PLATFORM-EXTERNAL-ACTIVE (plataformas externas por compañía)."""
+    """Plataformas por compañía. Mismo shape en SELF-PLATFORM-EXTERNAL-ACTIVE y platform-external-used."""
 
     model_config = ConfigDict(extra="allow")
 
@@ -287,7 +287,7 @@ VARIANT_ENDPOINT_LABELS: dict[str, str] = {
     "expenses_detail": "expenses-detail",
     "branch_list": "branch?filter",
     "company_list": "company?filter",
-    "platform_external_active": "SELF-PLATFORM-EXTERNAL-ACTIVE",
+    "platform_external_active": "SELF-PLATFORM-EXTERNAL-ACTIVE | platform-external-used",
     "cash_flow_adjacent_month_summary": "CASH-FLOW-ADJACENT-MONTH-SUMMARY",
     "sale_summary": "SALE/SUMMARY",
     "monthly_summary": "MONTHLY-SUMMARY",
