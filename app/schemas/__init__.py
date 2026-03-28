@@ -1,5 +1,6 @@
 from app.schemas.nubceo_responses import (
     BreakdownLine,
+    BranchRecord,
     CompanyAddress,
     CompanyRecord,
     ExpensesDetailLine,
@@ -9,6 +10,7 @@ from app.schemas.nubceo_responses import (
     NubceoMeta,
     PlatformExternalActiveRecord,
     PlatformExternalInfo,
+    parse_branch_list_envelope,
     parse_company_list_envelope,
     parse_expenses_detail_envelope,
     parse_expenses_summary_envelope,
@@ -19,6 +21,7 @@ from app.schemas.nubceo_responses import (
 
 __all__ = [
     "BreakdownLine",
+    "BranchRecord",
     "CompanyAddress",
     "CompanyRecord",
     "ExpensesDetailLine",
@@ -28,6 +31,7 @@ __all__ = [
     "NubceoMeta",
     "PlatformExternalActiveRecord",
     "PlatformExternalInfo",
+    "parse_branch_list_envelope",
     "parse_company_list_envelope",
     "parse_expenses_detail_envelope",
     "parse_expenses_summary_envelope",

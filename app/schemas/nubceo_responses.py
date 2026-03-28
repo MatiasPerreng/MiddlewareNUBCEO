@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, TypeAdapter
+from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
 
 class NubceoMeta(BaseModel):
@@ -105,6 +105,48 @@ class CompanyListEnvelope(BaseModel):
     status: int
     meta: NubceoMeta
     data: list[CompanyRecord]
+
+
+class BranchPlatformExternalItem(BaseModel):
+    """Plataforma vinculada a una sucursal (branch?filter)."""
+
+    model_config = ConfigDict(extra="allow")
+
+    id: str | int
+    platformExternalCode: str
+    externalCode: str
+
+
+class BranchCompanySnippet(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    name: str | None = None
+    taxCode: str | None = None
+
+
+class BranchRecord(BaseModel):
+    """Sucursal con PlatformExternals y Company embebido (branch?filter)."""
+
+    model_config = ConfigDict(extra="allow")
+
+    id: str | int
+    tenantId: str | int
+    companyId: str | int
+    addressId: str | int | None = None
+    branchRelatedId: str | int | None = None
+    name: str | None = None
+    headerBranchId: str | int | None = None
+    TOTAL: str | int | float | None = None
+    PlatformExternals: list[BranchPlatformExternalItem]
+    Company: BranchCompanySnippet
+    relatedBranches: list[Any] = Field(default_factory=list)
+    relatedPlatformExternalCodes: list[str] = Field(default_factory=list)
+
+
+class BranchListEnvelope(BaseModel):
+    status: int
+    meta: NubceoMeta
+    data: list[BranchRecord]
 
 
 class PlatformExternalInfo(BaseModel):
@@ -243,6 +285,7 @@ class ReportListEnvelope(BaseModel):
 VARIANT_ENDPOINT_LABELS: dict[str, str] = {
     "expenses_summary": "expenses-summary",
     "expenses_detail": "expenses-detail",
+    "branch_list": "branch?filter",
     "company_list": "company?filter",
     "platform_external_active": "SELF-PLATFORM-EXTERNAL-ACTIVE",
     "cash_flow_adjacent_month_summary": "CASH-FLOW-ADJACENT-MONTH-SUMMARY",
@@ -251,6 +294,15 @@ VARIANT_ENDPOINT_LABELS: dict[str, str] = {
     "report_list": "REPORT?sort",
     "generic": "?",
 }
+
+
+def _looks_like_branch_row(d: dict[str, Any]) -> bool:
+    """branch?filter: PlatformExternals + Company + relatedPlatformExternalCodes."""
+    if not isinstance(d.get("PlatformExternals"), list):
+        return False
+    if not isinstance(d.get("Company"), dict):
+        return False
+    return "relatedPlatformExternalCodes" in d and "companyId" in d
 
 
 def _looks_like_monthly_summary(data: dict[str, Any]) -> bool:
@@ -325,6 +377,11 @@ def parse_company_list_envelope(raw: dict[str, Any]) -> CompanyListEnvelope:
     return CompanyListEnvelope.model_validate(raw)
 
 
+def parse_branch_list_envelope(raw: dict[str, Any]) -> BranchListEnvelope:
+    """branch?filter: data es list[BranchRecord]."""
+    return BranchListEnvelope.model_validate(raw)
+
+
 def parse_platform_external_active_envelope(raw: dict[str, Any]) -> PlatformExternalActiveListEnvelope:
     """SELF-PLATFORM-EXTERNAL-ACTIVE: data es list[PlatformExternalActiveRecord]."""
     return PlatformExternalActiveListEnvelope.model_validate(raw)
@@ -393,6 +450,16 @@ def try_parse_data(raw: dict[str, Any]) -> dict[str, Any]:
                 cf = CashFlowAdjacentMonthSummaryData.model_validate(data)
                 variant = "cash_flow_adjacent_month_summary"
                 parsed = cf.model_dump()
+            except Exception:
+                pass
+
+    if variant == "generic" and isinstance(data, list) and data:
+        first = data[0]
+        if isinstance(first, dict) and _looks_like_branch_row(first):
+            try:
+                parsed_models = TypeAdapter(list[BranchRecord]).validate_python(data)
+                variant = "branch_list"
+                parsed = [m.model_dump() for m in parsed_models]
             except Exception:
                 pass
 

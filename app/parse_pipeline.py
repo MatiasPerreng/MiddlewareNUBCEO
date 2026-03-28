@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from app.schemas.nubceo_responses import (
+    parse_branch_list_envelope,
     parse_cash_flow_adjacent_month_summary_envelope,
     parse_company_list_envelope,
     parse_expenses_detail_envelope,
@@ -15,6 +16,7 @@ from app.schemas.nubceo_responses import (
     parse_sale_summary_envelope,
     try_parse_data,
 )
+from app.transform.branch_list import branch_list_derived
 from app.transform.company_list import company_list_index
 from app.transform.expenses_summary import expenses_summary_derived
 from app.transform.nubceo_breakdown import breakdown_lines_to_totals
@@ -36,6 +38,9 @@ def parse_nubceo_with_derived(body: dict[str, Any]) -> dict[str, Any]:
     elif v == "expenses_summary":
         sm = parse_expenses_summary_envelope(body)
         out["derived"] = {"section_totals": expenses_summary_derived(sm.data)}
+    elif v == "branch_list":
+        bl = parse_branch_list_envelope(body)
+        out["derived"] = branch_list_derived(bl.data)
     elif v == "company_list":
         cl = parse_company_list_envelope(body)
         out["derived"] = company_list_index(cl.data)
