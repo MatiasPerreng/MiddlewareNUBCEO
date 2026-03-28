@@ -5,13 +5,18 @@ from __future__ import annotations
 import httpx
 
 from app.config import settings
+from app.httpx_debug import httpx_event_hooks
 
 
 class SapClient:
     def __init__(self) -> None:
         base = settings.sap_base_url.rstrip("/")
         self._base = base
-        self._client = httpx.Client(base_url=base, timeout=120.0)
+        self._client = httpx.Client(
+            base_url=base,
+            timeout=120.0,
+            event_hooks=httpx_event_hooks("sap"),
+        )
         self._logged_in = False
 
     def close(self) -> None:

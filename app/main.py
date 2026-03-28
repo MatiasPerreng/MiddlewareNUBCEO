@@ -6,11 +6,14 @@ Las rutas son ejemplos; adaptá paths y mapeos al contrato de tu WEB.
 from __future__ import annotations
 
 import json
+import logging
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel, Field
+from starlette.requests import Request
 
 from app.clients.nubceo import NubceoClient
 from app.clients.sap import SapClient
@@ -18,7 +21,32 @@ from app.config import settings
 from app.mappers.sales import sap_invoice_to_nubceo_sale
 from app.parse_pipeline import parse_nubceo_with_derived
 
-app = FastAPI(title="SAP B1 - Nubceo Middleware", version="0.1.0")
+_log_in = logging.getLogger("middleware.incoming")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    if settings.debug:
+        logging.basicConfig(level=logging.INFO, format="%(message)s", force=True)
+        _log_in.info(
+            "DEBUG=true: [in] = peticiones a este servidor (localhost). "
+            "[nubceo]/[sap] = salientes del middleware."
+        )
+        _log_in.info(
+            "El navegador hacia nubceo.com NO pasa por uvicorn; usá F12 Red o mitmproxy para eso."
+        )
+    yield
+
+
+app = FastAPI(title="SAP B1 - Nubceo Middleware", version="0.1.0", lifespan=lifespan)
+
+
+@app.middleware("http")
+async def log_incoming_requests(request: Request, call_next):
+    response = await call_next(request)
+    if settings.debug:
+        _log_in.info("[in] %s %s -> %s", request.method, request.url.path, response.status_code)
+    return response
 
 
 class PushFromSapBody(BaseModel):

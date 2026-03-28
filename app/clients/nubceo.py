@@ -5,12 +5,17 @@ from __future__ import annotations
 import httpx
 
 from app.config import settings
+from app.httpx_debug import httpx_event_hooks
 
 
 class NubceoClient:
     def __init__(self) -> None:
         self._base = settings.nubceo_base_url.rstrip("/")
-        self._client = httpx.Client(base_url=self._base, timeout=120.0)
+        self._client = httpx.Client(
+            base_url=self._base,
+            timeout=120.0,
+            event_hooks=httpx_event_hooks("nubceo"),
+        )
         self._token: str | None = None
 
     def close(self) -> None:
