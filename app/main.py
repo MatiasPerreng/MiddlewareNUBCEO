@@ -5,6 +5,8 @@ Las rutas son ejemplos; adaptá paths y mapeos al contrato de tu WEB.
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Query
@@ -14,27 +16,7 @@ from app.clients.nubceo import NubceoClient
 from app.clients.sap import SapClient
 from app.config import settings
 from app.mappers.sales import sap_invoice_to_nubceo_sale
-from app.schemas.nubceo_responses import (
-    parse_cash_flow_adjacent_month_summary_envelope,
-    parse_company_list_envelope,
-    parse_expenses_detail_envelope,
-    parse_expenses_summary_envelope,
-    parse_monthly_summary_envelope,
-    parse_platform_external_active_envelope,
-    parse_report_list_envelope,
-    parse_sale_summary_envelope,
-    try_parse_data,
-)
-from app.transform.company_list import company_list_index
-from app.transform.expenses_summary import expenses_summary_derived
-from app.transform.nubceo_breakdown import breakdown_lines_to_totals
-from app.transform.platform_external_active import platform_external_active_index
-from app.transform.report_jobs import report_list_derived
-from app.transform.sale_monthly_cashflow import (
-    cash_flow_adjacent_derived,
-    monthly_summary_derived,
-    sale_summary_derived,
-)
+from app.parse_pipeline import parse_nubceo_with_derived
 
 app = FastAPI(title="SAP B1 - Nubceo Middleware", version="0.1.0")
 
@@ -57,31 +39,30 @@ def tool_parse_nubceo_json(body: dict[str, Any]) -> dict[str, Any]:
     Pegá el JSON crudo de Respuesta (Nubceo) y devuelve variante detectada + totales si aplica.
     Útil mientras vamos sumando ejemplos reales.
     """
-    out = try_parse_data(body)
-    v = out["variant"]
-    if v == "expenses_detail":
-        de = parse_expenses_detail_envelope(body)
-        out["derived"] = {"totals_by_entity": breakdown_lines_to_totals(de.data)}
-    elif v == "expenses_summary":
-        sm = parse_expenses_summary_envelope(body)
-        out["derived"] = {"section_totals": expenses_summary_derived(sm.data)}
-    elif v == "company_list":
-        cl = parse_company_list_envelope(body)
-        out["derived"] = company_list_index(cl.data)
-    elif v == "platform_external_active":
-        pe = parse_platform_external_active_envelope(body)
-        out["derived"] = platform_external_active_index(pe.data)
-    elif v == "sale_summary":
-        out["derived"] = sale_summary_derived(parse_sale_summary_envelope(body).data)
-    elif v == "monthly_summary":
-        out["derived"] = monthly_summary_derived(parse_monthly_summary_envelope(body).data)
-    elif v == "cash_flow_adjacent_month_summary":
-        out["derived"] = cash_flow_adjacent_derived(
-            parse_cash_flow_adjacent_month_summary_envelope(body).data
+    return parse_nubceo_with_derived(body)
+
+
+@app.get("/dev/parse-sample")
+def dev_parse_sample() -> dict[str, Any]:
+    """
+    Solo con DEBUG=true. Lee `dev_samples/sample.json` (o DEV_SAMPLE_PATH) en cada request:
+    editás el archivo, guardás, refrescás el navegador y ves el parseo sin re-postear.
+    """
+    if not settings.debug:
+        raise HTTPException(404, "Activa DEBUG=true en .env para usar /dev/parse-sample")
+    path = Path(settings.dev_sample_path)
+    if not path.is_file():
+        raise HTTPException(
+            404,
+            f"No existe el archivo: {path.resolve()}. Creá dev_samples/sample.json o ajustá DEV_SAMPLE_PATH.",
         )
-    elif v == "report_list":
-        out["derived"] = report_list_derived(parse_report_list_envelope(body).data)
-    return out
+    try:
+        body = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as e:
+        raise HTTPException(400, f"JSON inválido en {path}: {e}") from e
+    if not isinstance(body, dict):
+        raise HTTPException(400, "El JSON raíz debe ser un objeto { ... }")
+    return parse_nubceo_with_derived(body)
 
 
 @app.post("/bridge/sales/push-from-sap")

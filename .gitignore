@@ -22,6 +22,9 @@ build/
 .DS_Store
 Thumbs.db
 
+# Muestras locales con datos sensibles (el sample.json versionado es seguro de ejemplo)
+dev_samples/local.json
+
 # Cursor / herramientas locales
 .cursor/
 

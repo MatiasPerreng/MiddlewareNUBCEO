@@ -1,0 +1,13 @@
+{
+  "status": 200,
+  "meta": {
+    "count": 1,
+    "total": 0,
+    "pages": 0,
+    "requestId": "dev-sample"
+  },
+  "data": {
+    "prev": 0,
+    "next": 100.5
+  }
+}
