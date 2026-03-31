@@ -53,6 +53,14 @@ class NubceoClient:
         )
         return self._parse(r)
 
+    def insert_sales_async(self, tenant_id: str, body: list | dict) -> dict:
+        r = self._client.post(
+            f"/v1/tenants/{tenant_id}/reconciler/sales/insert-async",
+            json=body,
+            headers=self._headers(),
+        )
+        return self._parse(r)
+
     def get_sales(self, tenant_id: str, params: dict | None = None) -> dict:
         r = self._client.get(
             f"/v1/tenants/{tenant_id}/reconciler/sales",
@@ -80,6 +88,29 @@ class NubceoClient:
         )
         return self._parse(r)
 
+    def delete_sales_async(self, tenant_id: str, company_id: str, sale_ids: list[str]) -> dict:
+        r = self._client.post(
+            f"/v1/tenants/{tenant_id}/{company_id}/reconciler/sales/delete-async",
+            json=sale_ids,
+            headers=self._headers(),
+        )
+        return self._parse(r)
+
+    def get_request_results(self, tenant_id: str, params: dict | None = None) -> dict:
+        r = self._client.get(
+            f"/v1/tenants/{tenant_id}/request-result",
+            params=params or {},
+            headers=self._headers(),
+        )
+        return self._parse(r)
+
+    def get_request_result(self, tenant_id: str, request_id: str) -> dict:
+        r = self._client.get(
+            f"/v1/tenants/{tenant_id}/request-result/{request_id}",
+            headers=self._headers(),
+        )
+        return self._parse(r)
+
     def get_companies(self, tenant_id: str, params: dict | None = None) -> dict:
         # El PDF indica /v1/tenants/tenants/:id/companies — verificá en Swagger si hay typo.
         r = self._client.get(
@@ -99,6 +130,15 @@ class NubceoClient:
         r = self._client.get(
             f"/v1/tenants/{tenant_id}/accounting/ledger-header",
             params=params or {},
+            headers=self._headers(),
+        )
+        return self._parse(r)
+
+    def update_ledger_header_status(self, tenant_id: str, status: str, ids: list[str]) -> dict:
+        payload = {"status": status, "ids": ids}
+        r = self._client.patch(
+            f"/v1/tenants/{tenant_id}/accounting/ledger-header/status",
+            json=payload,
             headers=self._headers(),
         )
         return self._parse(r)

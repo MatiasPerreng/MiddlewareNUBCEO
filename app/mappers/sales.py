@@ -51,11 +51,19 @@ def sap_invoice_to_nubceo_sale(
     """
     doc_entry = inv.get("DocEntry")
     doc_num = inv.get("DocNum")
-    ext_id = f"{doc_num}-{doc_entry}" if doc_num is not None and doc_entry is not None else str(doc_entry)
+    base_id = f"{doc_num}-{doc_entry}" if doc_num is not None and doc_entry is not None else str(doc_entry or "")
+    if not base_id:
+        base_id = str(inv.get("DocObjectCode") or inv.get("CardCode") or "UNKNOWN")
+    type_prefix = "INV" if document_type == "invoice" else "CN"
+    ext_id = f"{type_prefix}-{base_id}"
 
     gross = _num(inv, "DocTotal")
     tax = _num(inv, "VatSum", "TotalTax")
     net = gross - tax
+    if document_type == "creditNote":
+        gross = -abs(gross)
+        tax = -abs(tax)
+        net = -abs(net)
 
     doc_date = inv.get("DocDate")
     date_iso = iso_date_from_sap(doc_date) if isinstance(doc_date, str) else iso_date_from_sap(None)

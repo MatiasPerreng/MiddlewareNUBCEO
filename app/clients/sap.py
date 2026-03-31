@@ -78,5 +78,26 @@ class SapClient:
         r.raise_for_status()
         return r.json()
 
+    def get_credit_notes(
+        self,
+        *,
+        top: int = 100,
+        skip: int = 0,
+        odata_filter: str | None = None,
+        orderby: str | None = None,
+        expand: str | None = None,
+    ) -> dict:
+        """Consulta notas de crédito de deudores (CreditNotes)."""
+        params: dict[str, str | int] = {"$top": top, "$skip": skip}
+        if odata_filter:
+            params["$filter"] = odata_filter
+        if orderby:
+            params["$orderby"] = orderby
+        if expand:
+            params["$expand"] = expand
+        r = self.request("GET", "/CreditNotes", params=params)
+        r.raise_for_status()
+        return r.json()
+
     def get_invoice(self, doc_entry: int) -> dict:
         return self.get_json(f"/Invoices({doc_entry})")  # type: ignore[return-value]
